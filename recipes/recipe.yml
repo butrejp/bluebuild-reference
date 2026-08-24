@@ -276,4 +276,14 @@ modules:
         - firefox
         - firefox-langpacks
 
+  - type: containerfile
+    snippets:
+      - RUN --mount=type=tmpfs,target=/tmp /some/script.sh
+    containerfiles:
+      - example
+      - subroutine
+
+  - type: custom-module
+    source: local
+
   - type: signing # this sets up the proper policy & signing files for signed images to work fully

@@ -1,0 +1,4 @@
+name: custom-module
+shortdesc: This is an example module module that simply creates a markerfile
+example: |
+  type: custom-module
