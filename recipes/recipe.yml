@@ -86,7 +86,7 @@ modules:
     user:
       # repo-name will overwrite the previously-configured repo-name for the user remote
       repo-name: flathub-user
-      repo-title: "Flathub (User)
+      repo-title: "Flathub (User)"
 
   - type: dnf
     repos:
@@ -238,8 +238,7 @@ modules:
 
   - type: script
     snippets:
-      - "curl https://example.com/examplebinary > /usr/bin/examplebinary" # example: download binary
-      - "ln -sf /usr/bin/ld.bfd /etc/alternatives/ld && ln -sf /etc/alternatives/ld /usr/bin/ld" # example: ld alternatives symlink workaround
+      - "ln -sf /usr/bin/ld.bfd /etc/alternatives/ld && ln -sf /etc/alternatives/ld /usr/bin/ld"
     scripts:
       - myscript.sh # example: run files/scripts/myscript.sh
       - myscript.nu # example: run files/scripts/myscript.nu
