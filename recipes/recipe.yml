@@ -12,34 +12,268 @@ image-version: latest # You can pin to a specific version of Fedora as well
 # module configuration, executed in order
 # you can include multiple instances of the same module
 modules:
-  - type: files
-    files:
-      - source: system
-        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
+  - type: akmods
+    base: main # if not specified, classic "main" base is used by default
+    install:
+      - openrazer
+      - v4l2loopback
+      - xone
+
+  - type: apk
+    install:
+      packages:
+        - git
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+
+  - type: apt
+    install:
+      packages:
+        - git
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+
+  - type: bling
+    install:
+        - rpmfusion # install RPMFusion repos, including tainted repos & disable negativo17 repos if installed
+        - negativo17 # install negativo17 repos and set priority to 90, uninstall RPMFusion repos if installed
+        - ublue-update # https://github.com/ublue-os/ublue-update
+        - 1password # install 1Password (stable) and `op` CLI tool
+        - dconf-update-service # a service unit that updates the dconf db on boot
+        - gnome-vrr # enables gnome-vrr for your image
+
+  - type: brew
+    nofile-limits: true # increase nofile limits
+    brew-analytics: false # disable telemetry
+
+  - type: chezmoi
+    repository: "https://github.com/octocat/dotfiles" # my dotfiles repo
+    all-users: false # make users have to enable chezmoi manually
+    file-conflict-policy: replace # override changed files with those from the repo
+  
+  - type: default-flatpaks@v1
+    notify: true # Send notification after install/uninstall is finished (true/false)
+    system:
+      # If no repo information is specified, Flathub will be used by default
+      repo-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      repo-name: flathub
+      repo-title: "Flathub (system-wide)" # Optional; this sets the remote's user-facing name in graphical frontends like GNOME Software
+      install:
+        - org.gnome.Loupe
+        - one.ablaze.floorp//lightning # This is an example of flatpak which has multiple branches in selection (flatpak//branch).
+                                      # Flatpak runtimes are not supported (like org.winehq.Wine//stable-23.08).
+                                      # Only normal flatpak applications are (like Floorp Lightning web browser in this example).
+                                      # Multiple install of same flatpaks with different branches is not supported.
+      remove:
+        - org.gnome.eog
+    # A flatpak repo can also be added without having to install flatpaks,
+    # as long as one of the repo- fields is present
+    user:
+      repo-name: flathub
+    # Assuming that the above example is configured first in a recipe,
+    # a subsequent usage might look like this:  
+  - type: default-flatpaks
+    system:
+      # If the repo-* fields are omitted on the subsequent usage,
+      # the module will use the previously configured repo.
+      # Otherwise, it will overwrite the repo configuration.
+      install:
+        - org.kde.kdenlive # this Flatpak is appended to the install list
+    user:
+      # repo-name will overwrite the previously-configured repo-name for the user remote
+      repo-name: flathub-user
+      repo-title: "Flathub (User)
 
   - type: dnf
     repos:
+      cleanup: true # clean up added repos after module is done
+      files:
+        - https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+        - fury.repo
       copr:
         - atim/starship
+        - trixieua/mutter-patched
+      keys:
+        - https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+      nonfree: rpmfusion
     install:
+      skip-unavailable: true # skip unavailable packages
       packages:
-        - micro
+        - repo: brave-browser
+          packages:
+            - brave-browser
         - starship
+        - https://github.com/Eugeny/tabby/releases/download/v1.0.209/tabby-1.0.209-linux-x64.rpm
+        - kubectl.rpm
+      exclude:
+        - alacritty
+    builddep:
+      packages:
+        - meson
+        - repo: fedora
+          packages:
+            - ffmpeg
     remove:
       packages:
-        # example: removing firefox (in favor of the flatpak)
-        # "firefox" is the main package, "firefox-langpacks" is a dependency
         - firefox
-        - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
+        - firefox-langpacks
+    replace:
+      - from-repo: copr:copr.fedorainfracloud.org:trixieua:mutter-patched
+        skip-unavailable: true # skip unavailable packages
+        packages:
+          - mutter
+          - mutter-common
+          - gdm
+    group-install:
+      with-optional: true # install optional packages from group
+      packages:
+        - cosmic-desktop
+        - cosmic-desktop-apps
+        - window-managers
+    group-remove:
+      packages:
+        - development-tools
 
-  - type: default-flatpaks
-    configurations:
-      - notify: true # Send notification after install/uninstall is finished (true/false)
-        scope: system
-        # If no repo information is specified, Flathub will be used by default
-        install: # system flatpaks we want all users to have and not remove
-          - org.mozilla.firefox
-          - org.gnome.Loupe
-      - scope: user # Also add Flathub user repo, but no user packages
+  - type: files
+    files:
+      - source: system   # copies `files/system/*` (* means everything inside it) into your image's root folder `/`
+        destination: / 
+      - source: my-image/usr   # copies `files/my-image/usr/*` to `/usr/` inside the image
+        destination: /usr
+
+  - type: fonts
+    fonts:
+      nerd-fonts:
+        - FiraCode # don't add spaces or "Nerd Font" suffix.
+        - Hack
+        - SourceCodePro
+        - Terminus
+        - JetBrainsMono
+        - NerdFontsSymbolsOnly
+      google-fonts:
+        - Roboto
+        - Open Sans
+      url-fonts:
+        - name: CustomFont
+          url: https://example.com/my-font.otf
+        - name: CompanyFonts
+          url: https://company.com/fonts.zip
+
+  - type: gnome-extensions
+    install:
+      - Night Theme Switcher
+      - Blur my Shell # Notice how extension is named "Blur my Shell" & not "Blur My Shell"?
+                      # Name is case-sensitive, so check if extension name is typed correctly
+      - AppIndicator and KStatusNotifierItem Support                
+      - 307 # Dash-to-Dock
+            # https://extensions.gnome.org/extension/307/dash-to-dock/
+            # You can also specify PK ID number from the extension URL,
+            # if you encounter the scenario where there are multiple extensions with the same name.
+            # You don't need to look & search for this scenario, since module will automatically fail & inform you to put PK ID number instead
+    uninstall:
+      - GSConnect # Uninstall step here should be used only for the extensions
+                  # which are not installed through OS package manager in the base image,
+                  # like extensions installed from gnome-extensions module
+
+  - type: gschema-overrides
+    include:
+      - zz1-myoverride.gschema.override # test & compile specific override file included in files/gschema-overrides/zz1-myoverride.gschema.override
+  - type: initramfs
+
+  - type: justfiles
+    validate: true
+    install: true
+    include:
+      - common
+      - gnome/monitors.just
+      - shared/flatpak/fix-theming.just
+      - justfile1.just
+
+  - type: kargs
+    arch: x86_64, aarch64 # only inject kernel arguments to these specific OS architectures
+    kargs:
+      - console=ttyS0,114800n8
+      - mitigations=on
+      - systemd.unified_cgroup_hierarchy=0
+
+  - type: os-release
+    properties:
+      ID: blue_build
+      NAME: BlueBuild
+      PRETTY_NAME: BlueBuild Image
+
+  - type: pacman
+    install:
+      packages:
+        - git
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
+
+  - type: rpm-ostree
+    repos:
+      - https://copr.fedorainfracloud.org/coprs/atim/starship/repo/fedora-%OS_VERSION%/atim-starship-fedora-%OS_VERSION%.repo # when including COPR repos, use the %OS_VERSION% magic string
+      - https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+    keys:
+      - https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+    optfix:
+      - Tabby # needed because tabby installs into /opt/Tabby
+      - brave.com
+    install:
+      - starship
+      - brave-browser
+      - https://github.com/Eugeny/tabby/releases/download/v1.0.209/tabby-1.0.209-linux-x64.rpm
+    remove:
+      - firefox
+      - firefox-langpacks
+    replace:
+      - from-repo: https://copr.fedorainfracloud.org/coprs/trixieua/mutter-patched/repo/fedora-%OS_VERSION%/trixieua-mutter-patched-fedora-%OS_VERSION%.repo
+        packages:
+          - mutter
+          - mutter-common
+          - gdm
+
+  - type: script
+    snippets:
+      - "curl https://example.com/examplebinary > /usr/bin/examplebinary" # example: download binary
+      - "ln -sf /usr/bin/ld.bfd /etc/alternatives/ld && ln -sf /etc/alternatives/ld /usr/bin/ld" # example: ld alternatives symlink workaround
+    scripts:
+      - myscript.sh # example: run files/scripts/myscript.sh
+      - myscript.nu # example: run files/scripts/myscript.nu
+
+  - type: soar
+    additional-repos: true
+    auto-upgrade: true
+    upgrade-interval: '3h'
+
+  - type: systemd
+    # this example disables automatic flatpak updates and enables a custom service unit for all users
+    system:
+      disabled:
+        - flatpak-system-update.timer
+    user:
+      enabled:
+        - my-custom.service
+      disabled:
+        - flatpak-user-update.timer
+
+  - type: yafti
+    custom-flatpaks:
+        - Celluloid: io.github.celluloid_player.Celluloid
+        - Krita: org.kde.krita
+
+  - type: zypper
+    install:
+      packages:
+        - git
+    remove:
+      packages:
+        - firefox
+        - firefox-langpacks
 
   - type: signing # this sets up the proper policy & signing files for signed images to work fully
